@@ -46,11 +46,13 @@ class App(ctk.CTk):
                 config_data = json.load(f)
 
             mode = config_data.get("rl_strategy_mode", "自動")
+            updated_at = config_data.get("updated_at", "未記錄")
+
             self.rl_mode.set(mode)
 
             if hasattr(self, "strategy_status_label"):
                 self.strategy_status_label.configure(
-                    text=f"目前策略偏向：{self.rl_mode.get()}"
+                    text=f"目前套用策略偏向：{self.rl_mode.get()}  ({updated_at})"
                 )
 
             if hasattr(self, "status_label"):
@@ -210,7 +212,6 @@ class App(ctk.CTk):
             text="進攻",
             variable=self.rl_mode,
             value="進攻",
-            #command=self.update_strategy_label
         )
         self.radio_attack.pack(anchor="w", padx=20, pady=5)
 
@@ -219,7 +220,6 @@ class App(ctk.CTk):
             text="防守",
             variable=self.rl_mode,
             value="防守",
-            #command=self.update_strategy_label
         )
         self.radio_defense.pack(anchor="w", padx=20, pady=5)
 
@@ -228,7 +228,6 @@ class App(ctk.CTk):
             text="發展",
             variable=self.rl_mode,
             value="發展",
-            #command=self.update_strategy_label
         )
         self.radio_economy.pack(anchor="w", padx=20, pady=5)
 
@@ -237,13 +236,12 @@ class App(ctk.CTk):
             text="自動",
             variable=self.rl_mode,
             value="自動",
-            #command=self.update_strategy_label
         )
         self.radio_auto.pack(anchor="w", padx=20, pady=5)
 
         self.strategy_status_label = ctk.CTkLabel(
             frame_strategy,
-            text=f"目前策略偏向：{self.rl_mode.get()}",
+            text=f"目前套用策略偏向：{self.rl_mode.get()}",
             font=ctk.CTkFont(size=15, weight="bold"),
             text_color="#4EA1FF"
         )
@@ -309,12 +307,6 @@ class App(ctk.CTk):
             text="將滑鼠移到策略選項上，可查看模式說明。"
         )
 
-    def update_strategy_label(self):
-        self.strategy_status_label.configure(
-            text=f"目前策略偏向：{self.rl_mode.get()}"
-        )
-        self.status_label.configure(text=f"已選擇模式：{self.rl_mode.get()}")
-
     def apply_strategy(self): #套用策略設定觸發
         selected_mode = self.rl_mode.get()
 
@@ -331,7 +323,7 @@ class App(ctk.CTk):
                 json.dump(config_data, f, ensure_ascii=False, indent=4)
 
             self.strategy_status_label.configure(
-                text=f"目前策略偏向：{selected_mode}"
+                text=f"目前套用策略偏向：{selected_mode} ({current_time})"
             )
             self.status_label.configure(
                 text=f"✅ 已套用並寫入 {CONFIG_FILE}：{selected_mode}"
