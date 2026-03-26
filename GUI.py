@@ -13,8 +13,8 @@ SCRIPTS = {
     "recorder": "memory_observer.py",      # 錄影機
     "build_db": "build_strategy_db.py",    # 資料庫轉換 & 分析
     "inspect": "inspect_db.py",            # 資料庫檢視
-    "spawn": "remote_spawn.py",            # 生產小兵 (選用)
-    "dance": "dance_creep.py",             # 跳舞測試 (選用)
+    "spawn": "remote_spawn.py",            # 生產小兵
+    "dance": "dance_creep.py",             # 跳舞測試 
 }
 
 CONFIG_FILE = "strategy_config.json"
@@ -29,16 +29,16 @@ class App(ctk.CTk):
 
         self.title("Screeps AI 指揮中心 🚀")
         self.geometry("560x730")
-        self.minsize(560, 730)
+        self.minsize(700, 730)
         self.resizable(True, True)
-
+        
         # RL 策略偏向預設
         self.rl_mode = ctk.StringVar(value="自動")
-
+        
         self.create_widgets()
         self.load_strategy_config()
 
-    def load_strategy_config(self):#啟動時讀取策略設定檔
+    def load_strategy_config(self):#啟動時讀取已有策略設定檔
         if not os.path.exists(CONFIG_FILE):
             return
         try:
@@ -52,7 +52,7 @@ class App(ctk.CTk):
 
             if hasattr(self, "strategy_status_label"):
                 self.strategy_status_label.configure(
-                    text=f"目前套用策略偏向：{self.rl_mode.get()}  ({updated_at})"
+                    text=f"目前套用策略偏向：{self.rl_mode.get()} \n 更新於：({updated_at})"
                 )
 
             if hasattr(self, "status_label"):
@@ -60,14 +60,14 @@ class App(ctk.CTk):
                     text=f"已載入策略設定：{self.rl_mode.get()}"
                 )
 
-            print(f"[完成] 已載入策略設定：{self.rl_mode.get()}")
+            self.write_log(f"[完成] 已載入策略設定：{self.rl_mode.get()}")
 
         except Exception as e:
             if hasattr(self, "status_label"):
                 self.status_label.configure(text=f"❌ 讀取設定失敗：{e}")
-            print(f"[錯誤] 讀取設定失敗: {e}")
+            self.write_log(f"[錯誤] 讀取設定失敗: {e}")
 
-    def create_widgets(self):#視窗建立
+    def create_widgets(self):  # 視窗建立
         # ===== 頂部標題 =====
         header = ctk.CTkLabel(
             self,
@@ -84,16 +84,32 @@ class App(ctk.CTk):
         )
         sub_header.pack(pady=(0, 15))
 
-        # ===== 分頁容器 =====
-        self.tabview = ctk.CTkTabview(self, width=520, height=540)
-        self.tabview.pack(padx=20, pady=10, fill="both", expand=True)
-        
+        content_frame = ctk.CTkFrame(self, fg_color="transparent")
+        content_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+        content_frame.grid_rowconfigure(0, weight=1)
+        content_frame.grid_columnconfigure(0, weight=1)   # 左側
+        content_frame.grid_columnconfigure(1, weight=0)   # 右側不要跟著拉伸
+
+        left_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+        left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+
+        right_frame = ctk.CTkFrame(content_frame, width=300, corner_radius=12)
+        right_frame.grid(row=0, column=1, sticky="ns")
+        right_frame.grid_propagate(False)
+
+        # ===== 左側分頁容器 =====
+        self.tabview = ctk.CTkTabview(left_frame)
+        self.tabview.pack(fill="both", expand=True)
+
         self.tabview.add("RL 策略設定")
         self.tabview.add("資料與控制")
 
-        # 建立兩個分頁內容
         self.build_strategy_tab(self.tabview.tab("RL 策略設定"))
         self.build_main_tab(self.tabview.tab("資料與控制"))
+
+        # ===== 右側固定日誌 =====
+        self.build_log_panel(right_frame)
 
         # ===== 底部狀態列 =====
         self.status_label = ctk.CTkLabel(
@@ -243,7 +259,10 @@ class App(ctk.CTk):
             frame_strategy,
             text=f"目前套用策略偏向：{self.rl_mode.get()}",
             font=ctk.CTkFont(size=15, weight="bold"),
-            text_color="#4EA1FF"
+            text_color="#4EA1FF",
+            justify="left",
+            anchor="w",
+            wraplength=320
         )
         self.strategy_status_label.pack(anchor="w", padx=15, pady=(12, 10))
 
@@ -256,7 +275,6 @@ class App(ctk.CTk):
         btn_apply.pack(fill="x", padx=15, pady=(0, 15))
 
         # ---------- 模式說明區 ----------
-
         self.mode_desc = {
             "進攻": "偏向主動擴張、壓制敵方與強化戰術推進。",
             "防守": "偏向基地穩定、防禦部署、敵襲應對與資產保護。",
@@ -264,7 +282,7 @@ class App(ctk.CTk):
             "自動": "由系統依局勢自動切換適合的策略模式。"
         }
 
-        #滑鼠懸停事件
+        # 滑鼠懸停事件
         self.radio_attack.bind("<Enter>", lambda e: self.show_mode_desc("進攻"))
         self.radio_attack.bind("<Leave>", lambda e: self.clear_mode_desc())
 
@@ -291,11 +309,55 @@ class App(ctk.CTk):
             frame_desc,
             text="將滑鼠移到策略選項上，可查看模式說明。",
             justify="left",
-            wraplength=460,
             anchor="w",
-            font=ctk.CTkFont(size=15, weight="bold")
+            font=ctk.CTkFont(size=15, weight="bold"),
+            wraplength=300
         )
-        self.desc_label.pack(anchor="w", padx=20, pady=(0, 15))
+        self.desc_label.pack(fill="x", anchor="w", padx=20, pady=(0, 15))
+
+    def build_log_panel(self, parent):  # 固定右側日誌區
+        log_title = ctk.CTkLabel(
+            parent,
+            text="系統日誌",
+            font=ctk.CTkFont(size=18, weight="bold")
+        )
+        log_title.pack(anchor="w", padx=15, pady=(12, 8))
+
+        self.log_textbox = ctk.CTkTextbox(parent)
+        self.log_textbox.pack(fill="both", expand=True, padx=15, pady=(0, 10))
+
+        self.log_textbox.insert("end", "系統啟動完成\n")
+        self.log_textbox.configure(state="disabled")
+
+        btn_clear_log = ctk.CTkButton(
+            parent,
+            text="清除日誌",
+            height=40,
+            command=self.clear_log
+        )
+        btn_clear_log.pack(fill="x", padx=15, pady=(0, 15))
+    
+    def write_log(self, message): #日誌寫入
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        full_message = f"[{timestamp}] {message}"
+
+        if hasattr(self, "log_textbox"):
+            self.log_textbox.configure(state="normal")
+            self.log_textbox.insert("end", full_message + "\n")
+            self.log_textbox.see("end")
+            self.log_textbox.configure(state="disabled")
+
+        if hasattr(self, "status_label"):
+            self.status_label.configure(text=message)
+
+        print(full_message)
+
+    def clear_log(self): #日誌清除
+        if hasattr(self, "log_textbox"):
+            self.log_textbox.configure(state="normal")
+            self.log_textbox.delete("1.0", "end")
+            self.log_textbox.insert("end", "日誌已清除\n")
+            self.log_textbox.configure(state="disabled")
 
     def show_mode_desc(self, mode): #模式說明顯示更改
         self.desc_label.configure(
@@ -323,28 +385,28 @@ class App(ctk.CTk):
                 json.dump(config_data, f, ensure_ascii=False, indent=4)
 
             self.strategy_status_label.configure(
-                text=f"目前套用策略偏向：{selected_mode} ({current_time})"
+                text=f"目前套用策略偏向：{selected_mode} \n 更新於：({current_time})"
             )
             self.status_label.configure(
                 text=f"✅ 已套用並寫入 {CONFIG_FILE}：{selected_mode}"
             )
-            print(f"[完成] 已套用 RL 策略偏向: {selected_mode}")
+            self.write_log(f"[完成] 已套用 RL 策略偏向: {selected_mode}")
 
         except Exception as e:
             self.status_label.configure(text=f"❌ 寫入設定失敗：{e}")
-            print(f"[錯誤] 寫入設定失敗: {e}")
+            self.write_log(f"[錯誤] 寫入設定失敗: {e}")
 
     def run_script(self, script_name):
         """啟動新的 CMD 視窗執行 Python 腳本"""
         if not os.path.exists(script_name):
             msg = f"[錯誤] 找不到檔案: {script_name}"
             self.status_label.configure(text=msg)
-            print(msg)
+            self.write_log(msg)
             return
 
         msg = f"正在啟動: {script_name}"
         self.status_label.configure(text=msg)
-        print(msg)
+        self.write_log(msg)
 
         cmd_command = f'start cmd /k "python {script_name}"'
         subprocess.Popen(cmd_command, shell=True)
