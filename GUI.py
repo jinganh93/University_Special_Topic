@@ -188,7 +188,7 @@ class App(ctk.CTk):
 
         btn_dance = ctk.CTkButton(
             frame_control,
-            text="跳舞測試 (Dance Test)",
+            text="跳舞測試(Dance Test)",
             height=42,
             command=lambda: self.run_script(SCRIPTS["dance"])
         )
